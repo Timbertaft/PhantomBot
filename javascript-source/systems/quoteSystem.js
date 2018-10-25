@@ -95,14 +95,20 @@
 
     /**
      * @function getQuote
-     * @param {Number} quoteId
+     * @param {Number} quoteId,
+     * @param {String} message
      * @returns {Array}
      */
-    function getQuote(quoteId) {
-        var quote;
+    function getQuote(quoteId, message) {
+        var quote, mquotelist;
 
-        if (!quoteId || isNaN(quoteId)) {
+        if (!quoteId || isNaN(quoteId) && (!message || 0 === message.length)) {
             quoteId = $.rand($.inidb.GetKeyList('quotes', '').length);
+        }
+        else if(message) {
+            mquotelist = $.inidb.searchByValue('quotes', message);
+            quote = mquotelist.rand(mquotelist.length);
+            return quote;
         }
 
         if ($.inidb.exists('quotes', quoteId)) {
