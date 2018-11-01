@@ -27,11 +27,12 @@
 
 /**
  * Anything you modify or remove in this script is at your own risk with Twitter.
+ * Timbertat 11/01/18 - modified gameChangeDelay to a longer cooldown to give game time to update.
  */
 (function() {
     var randPrev = 0,
         onlinePostDelay = 480 * 6e4, // 8 hour cooldown
-        gameChangeDelay = 60 * 6e4, // 1 hour cooldown
+        gameChangeDelay = 200 * 6e4, // 1 hour cooldown
         interval;
 
     /* Set default values for all configuration items. */

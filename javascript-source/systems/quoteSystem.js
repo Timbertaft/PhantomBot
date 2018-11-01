@@ -95,22 +95,15 @@
 
     /**
      * @function getQuote
-     * @param {Number} quoteId,
-     * @param {String} message
+     * @param {Number} quoteId
      * @returns {Array}
      */
-    function getQuote(quoteId, message) {
-        var quote, mquotelist;
+    function getQuote(quoteId) {
+        var quote;
 
-        if (!quoteId || isNaN(quoteId) && (!message || 0 === message.length)) {
+        if (!quoteId || isNaN(quoteId)) {
             quoteId = $.rand($.inidb.GetKeyList('quotes', '').length);
         }
-        else if(message) {
-            mquotelist = $.inidb.searchByValue('quotes', message);
-            quote = mquotelist.rand(mquotelist.length);
-            return quote;
-        }
-
         if ($.inidb.exists('quotes', quoteId)) {
             quote = JSON.parse($.inidb.get('quotes', quoteId));
             quote.push(quoteId);
@@ -128,7 +121,8 @@
             command = event.getCommand(),
             args = event.getArgs(),
             quote,
-            quoteStr;
+            quoteStr,
+            listoutput;
 
         /**
          * @commandpath editquote [id] [user|game|quote] [text] - Edit quotes.
@@ -260,10 +254,28 @@
 
         /**
          * @commandpath quote [quoteId] - Announce a quote by its Id, omit the id parameter to get a random quote
+         * Timbertaft 11/01/18 - Added isNAN(args[0]) branch to handle keyword quote searches.
          */
         if (command.equalsIgnoreCase('quote')) {
             quote = getQuote(args[0]);
-            if (quote.length > 0) {
+            if(isNaN(args[0])) {
+                quoteStr = ($.inidb.exists('settings', 'quoteMessage') ? $.inidb.get('settings', 'quoteMessage') : $.lang.get('quotesystem.get.success'));
+                var searchedString = args.join(' ');
+                matchingKeys = $.inidb.searchByValue('quotes', searchedString);
+                foundquote = $.rand(matchingKeys.length).valueOf();
+                if ($.inidb.exists('quotes', matchingKeys[foundquote])) {
+                    quote = JSON.parse($.inidb.get('quotes', matchingKeys[foundquote]));
+                    quote.push(matchingKeys[foundquote]);
+                }
+                quoteStr = quoteStr.replace('(id)', (quote.length == 5 ? quote[4].toString() : quote[3].toString())).
+                replace('(quote)', quote[1]).
+                replace('(user)', $.resolveRank(quote[0])).
+                replace('(game)', (quote.length == 5 ? quote[3] : "Some Game")).
+                replace('(date)', $.getLocalTimeString('dd-MM-yyyy', parseInt(quote[2])));
+                $.say(quoteStr);
+                return;
+            }
+            else if (quote.length > 0){
                 quoteStr = ($.inidb.exists('settings', 'quoteMessage') ? $.inidb.get('settings', 'quoteMessage') : $.lang.get('quotesystem.get.success'));
                 quoteStr = quoteStr.replace('(id)', (quote.length == 5 ? quote[4].toString() : quote[3].toString())).
                 replace('(quote)', quote[1]).
@@ -271,7 +283,11 @@
                 replace('(game)', (quote.length == 5 ? quote[3] : "Some Game")).
                 replace('(date)', $.getLocalTimeString('dd-MM-yyyy', parseInt(quote[2])));
                 $.say(quoteStr);
-            } else {
+                return;
+            } else if(isNaN(args[0])) {
+
+            }
+            else {
                 $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.get.404', (typeof args[0] != 'undefined' ? args[0] : '')));
             }
         }
@@ -313,6 +329,44 @@
 
             $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.searchquote.found', matchingKeys.join(', ')));
         }
+
+    /**
+     *  @commandpath quotelist - outputs a link to the entire quote database.
+     *  Timbertaft on 11/01/18 - Added quotelist command to generate user accessible txt file of all available quotes and
+     *  their associated keys.
+     */
+    if (command.equalsIgnoreCase('quotelist')) {
+        quotelist = $.inidb.GetKeyList('quotes', '');
+        if(quotelist.length > 0) {
+            if($.fileExists("./logs/logs/quotelog/quotes.txt")) {
+                $.writeToFile("", "./logs/logs/quotelog/quotes.txt", false);
+            }
+        for(i = 0; i <= quotelist.length - 1; i++) {
+            if ($.inidb.exists('quotes', quotelist[i])) {
+                quote = JSON.parse($.inidb.get('quotes', quotelist[i]));
+                quote.push(quotelist[i]);
+                quoteStr = ($.inidb.exists('settings', 'quoteMessage') ? $.inidb.get('settings', 'quoteMessage') : $.lang.get('quotesystem.get.success'));
+                quoteStr = quoteStr.replace('(id)', (quote.length == 5 ? quote[4].toString() : quote[3].toString())).
+                replace('(quote)', quote[1]).
+                replace('(user)', $.resolveRank(quote[0])).
+                replace('(game)', (quote.length == 5 ? quote[3] : "Some Game")).
+                replace('(date)', $.getLocalTimeString('dd-MM-yyyy', parseInt(quote[2])));
+                /// write all quotes to file
+                if($.fileExists("./logs/logs/quotelog/quotes.txt")) {
+                    $.writeToFile(quoteStr, "./logs/logs/quotelog/quotes.txt", true);
+
+                }
+            }
+
+        }
+            $.say("list of quotes available here: https://drive.google.com/file/d/19rViWidLF87-U0qal6UzUW1Uwufz4Wxe/view?usp=sharing");
+
+    }
+        else {
+            $.say("there are no quotes!");
+        }
+    }
+
     });
 
     /**
@@ -328,5 +382,6 @@
         $.registerChatCommand('./systems/quoteSystem.js', 'editquote', 2);
         $.registerChatCommand('./systems/quoteSystem.js', 'quote');
         $.registerChatCommand('./systems/quoteSystem.js', 'quotemessage', 1);
+        $.registerChatCommand('./systems/quoteSystem.js', 'quotelist', 7); // Timbertaft 11/01/18 - Added quotelistr.
     });
 })();
